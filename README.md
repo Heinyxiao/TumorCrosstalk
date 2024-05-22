@@ -1,2 +1,2 @@
 # TumorCrosstalk
-How do cancer cells "communicate" with microenvironmental cells?
+How do cancer cells "communicate" with their neighbors?
