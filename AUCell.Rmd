@@ -1,0 +1,89 @@
+---
+title: "AUCell"
+author: "Xue Xiao"
+date: "2024-06-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Install AUCell
+```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+BiocManager::install("AUCell")
+```
+
+## Load Packages
+```{r}
+library(AUCell)
+library(Matrix)
+library(SummarizedExperiment)
+library(Seurat)
+```
+
+
+## Load Genesets and Datasets
+```{r}
+setwd("/Users/xuexiao/Library/CloudStorage/GoogleDrive-heinyxiao@gmail.com/My Drive/Lab/Projects/Dedifferentiation/Data")
+CC1_markers <- read.csv("CC1_markers.csv", header = T, row.names = 1)
+CC1_geneset <- CC1_markers$Genes
+
+CSC_markers_0.007 <- read.csv("filtered_markers_above_0_007.csv", header = T, row.names = 1)
+CSC_geneset_0.007 <- CSC_markers_0.007$GENE
+
+CSC_markers_0.006 <- read.csv("filtered_markers_above_0_006.csv", header = T, row.names = 1)
+CSC_geneset_0.006 <- CSC_markers_0.006$GENE
+
+CSC_markers_0.005 <- read.csv("filtered_markers_above_0_005.csv", header = T, row.names = 1)
+CSC_geneset_0.005 <- CSC_markers_0.005$GENE
+
+gene_sets <- list(
+  CC1 = CC1_geneset,
+  CSC_0.007 = CSC_geneset_0.007,
+  CSC_0.006 = CSC_geneset_0.006,
+  CSC_0.005 = CSC_geneset_0.005
+)
+common_genes <- intersect(CC1_geneset, CSC_geneset_0.005)
+```
+
+
+```{r}
+# Open Seurat File
+seurat_obj <- readRDS("~/Library/CloudStorage/GoogleDrive-heinyxiao@gmail.com/My Drive/Lab/Projects/Dedifferentiation/Data/Cancer_cell_in_house_magic_cytotrace.rds")
+
+# Extract the expression matrix
+expr_matrix <- GetAssayData(seurat_obj, layer = "counts")
+
+```
+
+## Run AUCell
+```{r}
+# Build the rankings
+cells_rankings <- AUCell_buildRankings(expr_matrix, nCores = 1, plotStats = TRUE)
+
+# Calculate the AUCell scores
+cells_AUC <- AUCell_calcAUC(gene_sets, cells_rankings)
+
+# Add AUCell scores to Seurat metadata
+aucell_scores <- as.data.frame(t(as.data.frame(cells_AUC@assays@data$AUC)))
+colnames(aucell_scores) <- paste0("AUCell_", colnames(aucell_scores))
+seurat_obj <- AddMetaData(seurat_obj, metadata = aucell_scores)
+
+# View the Seurat object metadata to check if scores were added
+head(seurat_obj@meta.data)
+
+```
+
+## Visualization
+```{r inline_plot, fig.width=7, fig.height=5}
+
+# Define custom color palette
+custom_colors <- scale_color_gradientn(colors = c("gray", "yellow", "red"))
+
+# Visualize the AUCell scores with custom color scheme
+FeaturePlot(seurat_obj, features = colnames(aucell_scores), pt.size = 0.2, label = T) & custom_colors
+
+```
+
+

@@ -1,0 +1,60 @@
+---
+title: "BCSCdb"
+author: "Xue Xiao"
+date: "2024-06-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+```{r}
+library(ggplot2)
+```
+
+
+## Load all CSC markers
+```{r}
+setwd("/Users/xuexiao/Library/CloudStorage/GoogleDrive-heinyxiao@gmail.com/My Drive/Lab/Projects/Dedifferentiation/Data")
+all_CSC_markers <- read.csv("CSC_Biomarker_2022_All.csv", header = F)
+head(all_CSC_markers)
+length(unique(all_CSC_markers$V1))
+```
+
+## Filter top 100 markers
+```{r}
+## Unique markers
+unique_CSC_markers <- all_CSC_markers[!duplicated(all_CSC_markers$V1), ]
+
+## Sort the CSC markers in descending order of global score
+sorted_CSC_markers <- unique_CSC_markers[order(-as.numeric(unique_CSC_markers$V11)), ]
+
+## Check distribution of global score
+ggplot(unique_CSC_markers, aes(x = V11)) +
+  geom_histogram(binwidth = 0.05, fill = "blue", color = "black", alpha = 0.7) +
+  scale_x_continuous(limits = c(-0.1, 1), breaks = seq(-1, 1, by = 0.05)) +
+  labs(title = "Distribution of Global Scores",
+       x = "Global Score",
+       y = "Frequency") +
+  theme_minimal() +
+  stat_bin(binwidth = 0.05, geom = "text", aes(label = ..count..), vjust = -0.5, color = "black")
+## Select the top 100 markers according to global score
+table(unique_CSC_markers$V11)
+```
+
+
+```{r}
+sum(unique_CSC_markers$V11 > 0.007, na.rm = TRUE)  # 105 genes
+sum(unique_CSC_markers$V11 > 0.006, na.rm = TRUE)  # 158 genes
+sum(unique_CSC_markers$V11 > 0.005, na.rm = TRUE)  # 269 genes
+```
+## Filter genes with global score
+```{r}
+filtered_markers <- unique_CSC_markers[unique_CSC_markers$V11 > 0.005, ]
+unique_gene_names <- as.list(filtered_markers$V1)
+colnames(filtered_markers) <- c("GENE", "MARKER_TYPE", "EXPRESSION_LEVEL", "HGNC_ID", "CANCER_TYPE", "HISTOLOGICAL_TYPE", "CELL_LINE", "CSC_ENRICHMENT", "METHOD", "CONFIDENCE_SCORING", "GLOBAL_SCORING", "PUBMED_ID")
+write.csv(filtered_markers, "/Users/xuexiao/Library/CloudStorage/GoogleDrive-heinyxiao@gmail.com/My Drive/Lab/Projects/Dedifferentiation/Data/filtered_markers_above_0_005.csv")
+```
+
